@@ -44,6 +44,17 @@ def empty_iter():
     else:
         return compiler.empty_iter()
 
+def is_query_random(query):
+    """
+    Controls every query for the possibility of ORDER BY RAND().
+    """
+    pattern = re.compile('RAND\(\)', re.IGNORECASE)
+    matches = pattern.search(query)
+    if matches:
+        return True
+    return False
+        
+         
 
 def disallowed_table(*tables):
     """Returns True if a set of tables is in the blacklist or, if a whitelist is set,
@@ -328,7 +339,7 @@ class QueryCacheBackend(object):
                 signals.qc_skip.send(sender=cls, tables=tables,
                     query=(sql, params, cls.query.ordering_aliases),
                     key=key)
-            if tables and not blacklisted:
+            if tables and not blacklisted and not is_query_random(cls.as_sql()[0]):
                 gen_key = self.keyhandler.get_generation(*tables, **{'db': db})
                 key = self.keyhandler.sql_key(gen_key, sql, params,
                                               cls.get_ordering(),
